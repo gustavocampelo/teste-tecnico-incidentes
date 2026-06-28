@@ -1,28 +1,42 @@
 # Teste Técnico - Sistema de Gestão de Incidentes
 
-Este projeto foi desenvolvido como parte de um teste técnico com o objetivo de demonstrar a implementação de uma funcionalidade ponta a ponta, contemplando front-end, back-end, persistência em banco de dados, logs mínimos para diagnóstico, testes automatizados e análise técnica de incidente.
+![Prévia da aplicação](docs/images/preview.png)
+
+Sistema full stack para gestão de incidentes, desenvolvido como parte de um teste técnico. O projeto contempla front-end, back-end, persistência em banco de dados, logs mínimos para diagnóstico, testes automatizados, documentação de API, nota técnica e deploy demonstrativo.
+
+## Aplicação online
+
+Front-end publicado no GitHub Pages:
+
+```txt
+https://gustavocampelo.github.io/teste-tecnico-incidentes/
+```
+
+API publicada no Render:
+
+```txt
+https://incident-manager-api-yidz.onrender.com
+```
+
+Endpoint de saúde da API:
+
+```txt
+https://incident-manager-api-yidz.onrender.com/api/health
+```
+
+Endpoint principal da API:
+
+```txt
+https://incident-manager-api-yidz.onrender.com/api/incidents
+```
+
+Observação: a API está hospedada em ambiente gratuito no Render. Por isso, ela pode entrar em modo de espera após um período sem uso. Caso o indicador da API apareça como indisponível no primeiro acesso, aguarde alguns segundos e atualize a página.
 
 ## Visão geral
 
 A aplicação permite cadastrar, listar, filtrar e atualizar o status de incidentes. O fluxo foi pensado para simular um cenário real de acompanhamento de erros recorrentes em um sistema, permitindo registrar informações básicas do problema, severidade, status e datas de criação e atualização.
 
-## Tecnologias utilizadas
-
-### Back-end
-
-* ASP.NET Core Web API
-* Entity Framework Core
-* SQLite
-* xUnit
-* Logs nativos com `ILogger`
-
-### Front-end
-
-* React
-* TypeScript
-* Vite
-* Axios
-* CSS
+O front-end possui uma interface responsiva, com cards de resumo, formulário validado, filtros, listagem de incidentes e indicador dinâmico de disponibilidade da API.
 
 ## Funcionalidades
 
@@ -36,11 +50,43 @@ A aplicação permite cadastrar, listar, filtrar e atualizar o status de inciden
 * Persistência em banco de dados SQLite
 * Logs das principais operações da API
 * Testes automatizados dos cenários principais
+* Indicador visual de disponibilidade da API
+* Deploy demonstrativo online
+
+## Tecnologias utilizadas
+
+### Back-end
+
+* ASP.NET Core Web API
+* Entity Framework Core
+* SQLite
+* xUnit
+* Logs nativos com `ILogger`
+* Docker
+
+### Front-end
+
+* React
+* TypeScript
+* Vite
+* Axios
+* CSS
+
+### Deploy
+
+* GitHub Pages para o front-end
+* GitHub Actions para build e publicação do front-end
+* Render para hospedagem da API
+* Docker para empacotamento da API
 
 ## Estrutura do projeto
 
 ```txt
 teste-tecnico-incidentes/
+│
+├── .github/
+│   └── workflows/
+│       └── deploy-frontend.yml
 │
 ├── backend/
 │   ├── IncidentManager.Api/
@@ -50,13 +96,16 @@ teste-tecnico-incidentes/
 │   └── incident-manager-web/
 │
 ├── docs/
+│   ├── images/
+│   │   └── preview.png
 │   └── nota-tecnica.md
 │
+├── Dockerfile
 ├── README.md
 └── .gitignore
 ```
 
-## Como executar o projeto
+## Como executar localmente
 
 ### Pré-requisitos
 
@@ -87,13 +136,19 @@ Execute a API:
 dotnet run
 ```
 
-A API será executada em:
+A API será executada localmente em:
 
 ```txt
 http://localhost:5252
 ```
 
 Endpoint de teste:
+
+```txt
+http://localhost:5252/api/health
+```
+
+Endpoint de incidentes:
 
 ```txt
 http://localhost:5252/api/incidents
@@ -125,6 +180,18 @@ O front-end será executado em:
 http://localhost:5173
 ```
 
+Por padrão, em ambiente local, o front-end consome a API em:
+
+```txt
+http://localhost:5252/api
+```
+
+Essa configuração está no arquivo:
+
+```txt
+frontend/incident-manager-web/src/services/api.ts
+```
+
 ## Executando os testes
 
 Acesse a pasta do back-end:
@@ -139,7 +206,35 @@ Execute:
 dotnet test
 ```
 
+Os testes cobrem os principais cenários da API, incluindo criação de incidente, validação de dados obrigatórios, listagem, busca de registro inexistente e atualização de status.
+
+## Build do front-end
+
+Para validar o build do front-end:
+
+```bash
+cd frontend/incident-manager-web
+npm run build
+```
+
 ## Endpoints da API
+
+### Health check
+
+```http
+GET /api/health
+```
+
+Retorna o status de disponibilidade da API.
+
+Exemplo de resposta:
+
+```json
+{
+  "status": "Healthy",
+  "timestamp": "2026-06-28T19:03:10.0336398Z"
+}
+```
 
 ### Listar incidentes
 
@@ -238,6 +333,17 @@ EmAnalise
 Resolvido
 ```
 
+## Como validar o fluxo principal
+
+1. Acesse a aplicação publicada no GitHub Pages.
+2. Aguarde o indicador da API ficar verde.
+3. Cadastre um novo incidente preenchendo título, descrição e severidade.
+4. Verifique se o incidente aparece na listagem.
+5. Altere o status do incidente para "Em análise" ou "Resolvido".
+6. Utilize os filtros por status e severidade.
+7. Acesse o endpoint `/api/health` para validar a disponibilidade da API.
+8. Execute `dotnet test` localmente para validar os testes automatizados.
+
 ## Logs
 
 A API registra logs mínimos nas principais operações:
@@ -250,9 +356,39 @@ A API registra logs mínimos nas principais operações:
 
 Esses logs auxiliam no diagnóstico de problemas e na rastreabilidade das operações.
 
-## Observações
+## Deploy
 
-O banco utilizado é SQLite para simplificar a execução local. O arquivo de banco é criado automaticamente ao executar a API.
+### Front-end
+
+O front-end é publicado no GitHub Pages por meio de GitHub Actions.
+
+Arquivo do workflow:
+
+```txt
+.github/workflows/deploy-frontend.yml
+```
+
+Durante o build, a variável `VITE_API_BASE_URL` é utilizada para configurar a URL pública da API.
+
+### Back-end
+
+A API é publicada no Render utilizando Docker.
+
+Arquivo Docker:
+
+```txt
+Dockerfile
+```
+
+A API escuta a porta definida pelo ambiente de hospedagem e expõe os endpoints necessários para o front-end.
+
+## Observações sobre persistência
+
+O banco utilizado é SQLite para simplificar a execução local e o entendimento do projeto.
+
+No ambiente gratuito do Render, a persistência com SQLite deve ser considerada demonstrativa. Em um ambiente produtivo, o ideal seria utilizar um banco gerenciado, como PostgreSQL ou SQL Server.
+
+## Nota técnica
 
 A análise técnica do incidente, decisões, trade-offs e melhorias futuras estão documentadas em:
 
