@@ -4,6 +4,15 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins")
+    .Get<string[]>()
+    ?? new[]
+    {
+        "http://localhost:5173",
+        "https://gustavocampelo.github.io"
+    };
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -20,7 +29,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -41,7 +50,18 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.MapGet("/", () => Results.Ok(new
+{
+    application = "Incident Manager API",
+    status = "Running",
+    documentation = "/api/incidents"
+}));
+
+app.MapGet("/api/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    timestamp = DateTime.UtcNow
+}));
 
 app.UseCors("AllowFrontend");
 
