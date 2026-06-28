@@ -1220,3 +1220,70 @@ body {
     text-align: left;
   }
 }
+
+
+.app-nav.glass-card {
+  position: sticky;
+  top: 18px;
+  z-index: 999;
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.045)
+    ) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+
+  backdrop-filter: blur(34px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(190%) !important;
+
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.35) inset,
+    0 24px 60px rgba(0, 0, 0, 0.42),
+    0 8px 24px rgba(0, 0, 0, 0.28) !important;
+
+  transform: translateZ(0);
+  isolation: isolate;
+}
+
+.app-nav.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(0, 113, 227, 0.16),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.09),
+      rgba(255, 255, 255, 0.02)
+    );
+
+  pointer-events: none;
+}
+
+.app-nav.glass-card::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: inherit;
+
+  background: rgba(5, 5, 8, 0.34);
+  pointer-events: none;
+}
+
+@supports not ((backdrop-filter: blur(20px)) or (-webkit-backdrop-filter: blur(20px))) {
+  .app-nav.glass-card {
+    background: rgba(18, 18, 22, 0.92) !important;
+  }
+}
