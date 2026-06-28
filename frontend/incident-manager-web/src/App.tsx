@@ -6,6 +6,7 @@ import "./App.css";
 type IncidentSeverity = "Baixa" | "Media" | "Alta" | "Critica";
 type IncidentStatus = "Aberto" | "EmAnalise" | "Resolvido";
 type ApiStatus = "checking" | "online" | "offline";
+type ActivePage = "dashboard" | "processes";
 
 interface Incident {
   id: string;
@@ -31,19 +32,13 @@ const initialFormData: FormData = {
   status: "Aberto",
 };
 
-const inputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-slate-900 shadow-sm outline-none transition duration-200 placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
-
-const selectClass =
-  "w-full cursor-pointer rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-slate-900 shadow-sm outline-none transition duration-200 hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
-
 function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [formData, setFormData] = useState<FormData>(initialFormData);
-
   const [editingIncidentId, setEditingIncidentId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [severityFilter, setSeverityFilter] = useState("");
+  const [activePage, setActivePage] = useState<ActivePage>("dashboard");
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,40 +46,42 @@ function App() {
 
   const isEditing = Boolean(editingIncidentId);
 
-  const stats = useMemo(() => {
-    return {
-      total: incidents.length,
-      open: incidents.filter((incident) => incident.status === "Aberto").length,
-      analysis: incidents.filter((incident) => incident.status === "EmAnalise").length,
-      resolved: incidents.filter((incident) => incident.status === "Resolvido").length,
-    };
-  }, [incidents]);
+  const stats = useMemo(() => ({
+    total: incidents.length,
+    open: incidents.filter((i) => i.status === "Aberto").length,
+    analysis: incidents.filter((i) => i.status === "EmAnalise").length,
+    resolved: incidents.filter((i) => i.status === "Resolvido").length,
+    critical: incidents.filter((i) => i.severity === "Critica").length,
+  }), [incidents]);
+
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((incident) => {
+      const matchesStatus = statusFilter ? incident.status === statusFilter : true;
+      const matchesSeverity = severityFilter ? incident.severity === severityFilter : true;
+
+      return matchesStatus && matchesSeverity;
+    });
+  }, [incidents, statusFilter, severityFilter]);
+
+  const latestIncidents = useMemo(() => incidents.slice(0, 3), [incidents]);
+
+  const resolutionRate = stats.total > 0
+    ? Math.round((stats.resolved / stats.total) * 100)
+    : 0;
 
   async function loadIncidents() {
     setLoading(true);
     setApiStatus("checking");
 
     try {
-      const params: Record<string, string> = {};
-
-      if (statusFilter) {
-        params.status = statusFilter;
-      }
-
-      if (severityFilter) {
-        params.severity = severityFilter;
-      }
-
-      const response = await api.get<Incident[]>("/incidents", { params });
+      const response = await api.get<Incident[]>("/incidents");
 
       setIncidents(response.data);
       setApiStatus("online");
       setErrors([]);
     } catch {
       setApiStatus("offline");
-      setErrors([
-        "Não foi possível carregar os incidentes. Verifique se a API está rodando.",
-      ]);
+      setErrors(["Não foi possível carregar os incidentes. Verifique se a API está rodando."]);
     } finally {
       setLoading(false);
     }
@@ -92,7 +89,7 @@ function App() {
 
   useEffect(() => {
     void loadIncidents();
-  }, [statusFilter, severityFilter]);
+  }, []);
 
   function validateForm() {
     const validationErrors: string[] = [];
@@ -109,10 +106,7 @@ function App() {
       validationErrors.push("A descrição é obrigatória.");
     }
 
-    if (
-      formData.description.trim().length > 0 &&
-      formData.description.trim().length < 10
-    ) {
+    if (formData.description.trim().length > 0 && formData.description.trim().length < 10) {
       validationErrors.push("A descrição deve ter pelo menos 10 caracteres.");
     }
 
@@ -143,6 +137,7 @@ function App() {
         });
 
         setSuccessMessage("Incidente atualizado com sucesso.");
+        setActivePage("processes");
       } else {
         await api.post("/incidents", {
           title: formData.title,
@@ -171,6 +166,7 @@ function App() {
   }
 
   function handleEditIncident(incident: Incident) {
+    setActivePage("processes");
     setEditingIncidentId(incident.id);
 
     setFormData({
@@ -183,9 +179,11 @@ function App() {
     setErrors([]);
     setSuccessMessage("");
 
-    document
-      .getElementById("novo-incidente")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      document
+        .getElementById("editor-panel")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   }
 
   function cancelEdit() {
@@ -219,9 +217,7 @@ function App() {
     } catch {
       setApiStatus("offline");
       setSuccessMessage("");
-      setErrors([
-        "Não foi possível excluir o incidente. Verifique se a API está rodando.",
-      ]);
+      setErrors(["Não foi possível excluir o incidente. Verifique se a API está rodando."]);
     }
   }
 
@@ -237,9 +233,7 @@ function App() {
     } catch {
       setApiStatus("offline");
       setSuccessMessage("");
-      setErrors([
-        "Não foi possível atualizar o status do incidente. Verifique se a API está rodando.",
-      ]);
+      setErrors(["Não foi possível atualizar o status do incidente. Verifique se a API está rodando."]);
     }
   }
 
@@ -248,513 +242,542 @@ function App() {
     setSeverityFilter("");
   }
 
+  function changePage(page: ActivePage) {
+    if (page === "dashboard") {
+      cancelEdit();
+    }
+
+    setActivePage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function formatStatus(status: IncidentStatus) {
-    const statusMap: Record<IncidentStatus, string> = {
+    return {
       Aberto: "Aberto",
       EmAnalise: "Em análise",
       Resolvido: "Resolvido",
-    };
-
-    return statusMap[status];
+    }[status];
   }
 
   function formatSeverity(severity: IncidentSeverity) {
-    const severityMap: Record<IncidentSeverity, string> = {
+    return {
       Baixa: "Baixa",
       Media: "Média",
       Alta: "Alta",
       Critica: "Crítica",
-    };
-
-    return severityMap[severity];
+    }[severity];
   }
 
-  function getApiStatusContent() {
-    const statusMap: Record<
-      ApiStatus,
-      {
-        title: string;
-        description: string;
-        dotClass: string;
-        badgeClass: string;
-      }
-    > = {
-      online: {
-        title: "API conectada",
-        description: "Back-end ASP.NET Core respondendo corretamente.",
-        dotClass: "bg-emerald-400 shadow-emerald-400/40",
-        badgeClass: "border-emerald-300/30 bg-emerald-400/10 text-emerald-100",
-      },
-      offline: {
-        title: "API indisponível",
-        description: "Aguarde alguns segundos e atualize a página.",
-        dotClass: "bg-red-400 shadow-red-400/40",
-        badgeClass: "border-red-300/30 bg-red-400/10 text-red-100",
-      },
-      checking: {
-        title: "Verificando API",
-        description: "Consultando conexão com o back-end.",
-        dotClass: "bg-amber-300 shadow-amber-300/40",
-        badgeClass: "border-amber-300/30 bg-amber-400/10 text-amber-100",
-      },
-    };
+  const severityConfig: Record<IncidentSeverity, { dot: string; badge: string; glow: string }> = {
+    Baixa: { dot: "#30D158", badge: "severity-low", glow: "rgba(48,209,88,0.3)" },
+    Media: { dot: "#FFD60A", badge: "severity-medium", glow: "rgba(255,214,10,0.3)" },
+    Alta: { dot: "#FF9F0A", badge: "severity-high", glow: "rgba(255,159,10,0.3)" },
+    Critica: { dot: "#FF453A", badge: "severity-critical", glow: "rgba(255,69,58,0.4)" },
+  };
 
-    return statusMap[apiStatus];
-  }
+  const statusConfig: Record<IncidentStatus, { dot: string; badge: string }> = {
+    Aberto: { dot: "#FF9F0A", badge: "status-open" },
+    EmAnalise: { dot: "#0A84FF", badge: "status-analysis" },
+    Resolvido: { dot: "#30D158", badge: "status-resolved" },
+  };
 
-  function getSeverityStyles(severity: IncidentSeverity) {
-    const severityMap: Record<IncidentSeverity, string> = {
-      Baixa: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      Media: "border-yellow-200 bg-yellow-50 text-yellow-700",
-      Alta: "border-orange-200 bg-orange-50 text-orange-700",
-      Critica: "border-red-200 bg-red-50 text-red-700",
-    };
+  const apiStatusMap: Record<ApiStatus, { label: string; desc: string; cls: string; dot: string }> = {
+    online: {
+      label: "Sistema operacional",
+      desc: "API respondendo normalmente",
+      cls: "api-online",
+      dot: "#30D158",
+    },
+    offline: {
+      label: "API indisponível",
+      desc: "Verifique a conexão com o back-end",
+      cls: "api-offline",
+      dot: "#FF453A",
+    },
+    checking: {
+      label: "Verificando conexão",
+      desc: "Consultando o back-end...",
+      cls: "api-checking",
+      dot: "#FFD60A",
+    },
+  };
 
-    return severityMap[severity];
-  }
+  const apiInfo = apiStatusMap[apiStatus];
 
-  function getStatusDotStyles(status: IncidentStatus) {
-    const statusMap: Record<IncidentStatus, string> = {
-      Aberto: "bg-orange-400 shadow-orange-400/30",
-      EmAnalise: "bg-blue-500 shadow-blue-500/30",
-      Resolvido: "bg-emerald-500 shadow-emerald-500/30",
-    };
-
-    return statusMap[status];
-  }
-
-  function getStatusBadgeStyles(status: IncidentStatus) {
-    const statusMap: Record<IncidentStatus, string> = {
-      Aberto: "border-orange-200 bg-orange-50 text-orange-700",
-      EmAnalise: "border-blue-200 bg-blue-50 text-blue-700",
-      Resolvido: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    };
-
-    return statusMap[status];
-  }
-
-  const apiStatusContent = getApiStatusContent();
-
-  return (
-    <main className="min-h-screen px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-7xl">
-        <section className="animate-fade-up relative overflow-hidden rounded-[2rem] border border-white/20 bg-slate-950 px-6 py-8 text-white shadow-2xl shadow-slate-900/20 sm:px-10 sm:py-12 lg:grid lg:min-h-[360px] lg:grid-cols-[1fr_360px] lg:gap-10">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
-
-          <div className="relative z-10">
-            <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-100 backdrop-blur">
-              Teste Técnico Full Stack
-            </span>
-
-            <h1 className="mt-6 max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.08em] sm:text-6xl lg:text-7xl">
-              Gestão de Incidentes
-            </h1>
-
-            <p className="mt-6 max-w-2xl text-base leading-8 text-blue-100 sm:text-lg">
-              Cadastre, acompanhe, edite, exclua e priorize incidentes com uma
-              experiência moderna, clara e orientada ao diagnóstico.
-            </p>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#novo-incidente"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-5 font-black text-blue-700 shadow-xl shadow-slate-950/20 transition duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
-              >
-                Cadastrar incidente
-              </a>
-
-              <a
-                href="#incidentes"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-5 font-black text-white backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-white/15"
-              >
-                Ver listagem
-              </a>
-            </div>
-          </div>
-
-          <div className="relative z-10 mt-8 flex items-end lg:mt-0">
-            <div className="w-full rounded-3xl border border-white/15 bg-white/10 p-5 shadow-2xl shadow-slate-950/10 backdrop-blur-xl">
-              <div
-                className={`inline-flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-black ${apiStatusContent.badgeClass}`}
-              >
-                <span
-                  className={`h-3 w-3 rounded-full shadow-[0_0_0_8px] animate-soft-pulse ${apiStatusContent.dotClass}`}
-                />
-                {apiStatusContent.title}
-              </div>
-
-              <p className="mt-4 text-sm leading-6 text-blue-100">
-                {apiStatusContent.description}
-              </p>
-
-              <div className="mt-5 rounded-2xl border border-white/10 bg-black/10 p-4">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">
-                  Stack
-                </span>
-                <p className="mt-2 text-sm font-semibold text-white">
-                  ASP.NET Core API + React + TypeScript
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-          aria-label="Resumo dos incidentes"
-        >
-          {[
-            ["Total", stats.total, "Incidentes na visão atual"],
-            ["Abertos", stats.open, "Aguardando tratativa"],
-            ["Em análise", stats.analysis, "Em diagnóstico"],
-            ["Resolvidos", stats.resolved, "Concluídos"],
-          ].map(([label, value, description], index) => (
-            <article
-              key={label}
-              className="animate-scale-in rounded-3xl border border-white/70 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10"
-              style={{ animationDelay: `${index * 70}ms` }}
-            >
-              <span className="text-sm font-black text-slate-500">{label}</span>
-              <strong className="mt-2 block text-4xl font-black tracking-[-0.06em] text-slate-950">
-                {value}
-              </strong>
-              <small className="mt-1 block text-sm leading-5 text-slate-500">
-                {description}
-              </small>
-            </article>
-          ))}
-        </section>
-
-        <section
-          id="novo-incidente"
-          className="mt-5 rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl sm:p-7"
-        >
-          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+  function renderMessages() {
+    return (
+      <>
+        {errors.length > 0 && (
+          <div className="alert alert-error">
+            <span className="alert-icon">!</span>
             <div>
-              <span className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">
-                {isEditing ? "Edição" : "Cadastro"}
-              </span>
-
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">
-                {isEditing ? "Editar incidente" : "Novo incidente"}
-              </h2>
+              <strong>Revise os pontos abaixo</strong>
+              {errors.map((e) => <p key={e}>{e}</p>)}
             </div>
+          </div>
+        )}
 
-            <p className="max-w-xl text-sm leading-7 text-slate-500">
-              {isEditing
-                ? "Atualize os dados do incidente selecionado e salve as alterações."
-                : "Registre o problema com informações objetivas para facilitar a análise técnica."}
-            </p>
+        {successMessage && (
+          <div className="alert alert-success">
+            <span className="alert-icon">✓</span>
+            <div>
+              <strong>{successMessage}</strong>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  function renderIncidentForm() {
+    return (
+      <form onSubmit={handleSubmit} className="incident-form">
+        <div className="field">
+          <label htmlFor="title" className="field-label">Título</label>
+          <input
+            id="title"
+            type="text"
+            className="field-input"
+            placeholder="Ex: Falha no serviço de autenticação"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="description" className="field-label">Descrição</label>
+          <textarea
+            id="description"
+            className="field-input field-textarea"
+            placeholder="Descreva o comportamento observado, impacto e passos para reprodução"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
+        </div>
+
+        <div className="form-row">
+          <div className="field">
+            <label htmlFor="severity" className="field-label">Severidade</label>
+            <select
+              id="severity"
+              className="field-select"
+              value={formData.severity}
+              onChange={(e) => setFormData({ ...formData, severity: e.target.value as IncidentSeverity })}
+            >
+              <option value="">Selecione</option>
+              <option value="Baixa">Baixa</option>
+              <option value="Media">Média</option>
+              <option value="Alta">Alta</option>
+              <option value="Critica">Crítica</option>
+            </select>
           </div>
 
           {isEditing && (
-            <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-900">
-              <strong className="block font-black">Modo de edição ativo</strong>
-              <span className="mt-1 block text-sm text-slate-600">
-                Você está editando um incidente existente. Para criar um novo,
-                cancele a edição.
-              </span>
-            </div>
-          )}
-
-          {errors.length > 0 && (
-            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
-              <strong className="font-black">Revise os pontos abaixo:</strong>
-
-              <div className="mt-2 grid gap-1">
-                {errors.map((error) => (
-                  <p key={error} className="text-sm">
-                    {error}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
-              <strong className="font-black">{successMessage}</strong>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
-            <div className="grid gap-2">
-              <label htmlFor="title" className="font-black text-slate-700">
-                Título
-              </label>
-              <input
-                id="title"
-                type="text"
-                className={inputClass}
-                placeholder="Ex: Erro ao carregar painel administrativo"
-                value={formData.title}
-                onChange={(event) =>
-                  setFormData({ ...formData, title: event.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label htmlFor="description" className="font-black text-slate-700">
-                Descrição
-              </label>
-              <textarea
-                id="description"
-                className={`${inputClass} min-h-32 resize-y leading-7`}
-                placeholder="Descreva o comportamento observado, impacto, contexto e passos para reprodução"
-                value={formData.description}
-                onChange={(event) =>
-                  setFormData({ ...formData, description: event.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-[1fr_220px_240px] lg:items-end">
-              <div className="grid gap-2">
-                <label htmlFor="severity" className="font-black text-slate-700">
-                  Severidade
-                </label>
-                <select
-                  id="severity"
-                  className={selectClass}
-                  value={formData.severity}
-                  onChange={(event) =>
-                    setFormData({
-                      ...formData,
-                      severity: event.target.value as IncidentSeverity,
-                    })
-                  }
-                >
-                  <option value="">Selecione uma severidade</option>
-                  <option value="Baixa">Baixa</option>
-                  <option value="Media">Média</option>
-                  <option value="Alta">Alta</option>
-                  <option value="Critica">Crítica</option>
-                </select>
-              </div>
-
-              {isEditing && (
-                <div className="grid gap-2">
-                  <label htmlFor="status" className="font-black text-slate-700">
-                    Status
-                  </label>
-                  <select
-                    id="status"
-                    className={selectClass}
-                    value={formData.status}
-                    onChange={(event) =>
-                      setFormData({
-                        ...formData,
-                        status: event.target.value as IncidentStatus,
-                      })
-                    }
-                  >
-                    <option value="Aberto">Aberto</option>
-                    <option value="EmAnalise">Em análise</option>
-                    <option value="Resolvido">Resolvido</option>
-                  </select>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="min-h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 font-black text-white shadow-xl shadow-blue-600/25 transition duration-200 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-blue-600/30"
-              >
-                {isEditing ? "Salvar alterações" : "Cadastrar incidente"}
-              </button>
-            </div>
-
-            {isEditing && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-5 font-black text-slate-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700 hover:shadow-lg"
-                  onClick={cancelEdit}
-                >
-                  Cancelar edição
-                </button>
-              </div>
-            )}
-          </form>
-        </section>
-
-        <section
-          id="incidentes"
-          className="mt-5 rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl sm:p-7"
-        >
-          <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-start">
-            <div>
-              <span className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">
-                Monitoramento
-              </span>
-
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">
-                Incidentes cadastrados
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-500">
-                {incidents.length} incidente(s) encontrado(s)
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[560px]">
+            <div className="field">
+              <label htmlFor="status" className="field-label">Status</label>
               <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                aria-label="Filtrar por status"
-                className={selectClass}
+                id="status"
+                className="field-select"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as IncidentStatus })}
               >
-                <option value="">Todos os status</option>
                 <option value="Aberto">Aberto</option>
                 <option value="EmAnalise">Em análise</option>
                 <option value="Resolvido">Resolvido</option>
               </select>
+            </div>
+          )}
 
-              <select
-                value={severityFilter}
-                onChange={(event) => setSeverityFilter(event.target.value)}
-                aria-label="Filtrar por severidade"
-                className={selectClass}
-              >
-                <option value="">Todas as severidades</option>
-                <option value="Baixa">Baixa</option>
-                <option value="Media">Média</option>
-                <option value="Alta">Alta</option>
-                <option value="Critica">Crítica</option>
-              </select>
+          <div className="field field-submit">
+            <button type="submit" className="btn-primary btn-full">
+              {isEditing ? "Salvar alterações" : "Cadastrar"}
+            </button>
+          </div>
+        </div>
 
-              <button
-                type="button"
-                className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 font-black text-slate-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700 hover:shadow-lg"
-                onClick={clearFilters}
-              >
-                Limpar filtros
-              </button>
+        {isEditing && (
+          <div className="form-cancel-row">
+            <button type="button" className="btn-ghost-sm" onClick={cancelEdit}>
+              Cancelar edição
+            </button>
+          </div>
+        )}
+      </form>
+    );
+  }
+
+  function renderIncidentCard(incident: Incident, index: number) {
+    const sev = severityConfig[incident.severity];
+    const sta = statusConfig[incident.status];
+
+    return (
+      <article
+        key={incident.id}
+        className="incident-card"
+        style={{ animationDelay: `${index * 45}ms` }}
+      >
+        <div className="incident-top">
+          <div className="incident-meta">
+            <span
+              className="status-dot"
+              style={{
+                background: sta.dot,
+                boxShadow: `0 0 0 4px ${sta.dot}22, 0 0 12px ${sta.dot}55`,
+              }}
+            />
+
+            <div className="incident-text">
+              <h3 className="incident-title">{incident.title}</h3>
+              <p className="incident-desc">{incident.description}</p>
             </div>
           </div>
 
-          {loading ? (
-            <div className="mt-6 grid justify-items-center gap-3 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-              <h3 className="text-lg font-black text-slate-900">
-                Carregando incidentes...
-              </h3>
-              <p className="text-sm text-slate-500">
-                Buscando dados atualizados na API.
-              </p>
+          <span
+            className={`severity-badge ${sev.badge}`}
+            style={{ boxShadow: `0 0 16px ${sev.glow}` }}
+          >
+            {formatSeverity(incident.severity)}
+          </span>
+        </div>
+
+        <div className="incident-details">
+          <div className="detail-block">
+            <span className="detail-label">Status</span>
+            <span className={`status-badge ${sta.badge}`}>
+              {formatStatus(incident.status)}
+            </span>
+          </div>
+
+          <div className="detail-block">
+            <span className="detail-label">Criado em</span>
+            <span className="detail-value">
+              {new Date(incident.createdAt).toLocaleString("pt-BR")}
+            </span>
+          </div>
+
+          <div className="detail-block">
+            <span className="detail-label">Atualizar status</span>
+            <select
+              value={incident.status}
+              className="field-select field-select-sm"
+              onChange={(e) => updateStatus(incident.id, e.target.value as IncidentStatus)}
+            >
+              <option value="Aberto">Aberto</option>
+              <option value="EmAnalise">Em análise</option>
+              <option value="Resolvido">Resolvido</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="incident-actions">
+          <button type="button" className="btn-edit" onClick={() => handleEditIncident(incident)}>
+            Editar
+          </button>
+
+          <button type="button" className="btn-delete" onClick={() => handleDeleteIncident(incident.id)}>
+            Excluir
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <div className="app-root">
+      <div className="orb orb-1" />
+      <div className="orb orb-2" />
+      <div className="orb orb-3" />
+
+      <main className="main-content">
+        <nav className="app-nav glass-card">
+          <div className="brand-block">
+            <span className="brand-mark">GC</span>
+            <div>
+              <strong>Incident Manager</strong>
+              <span>by Gustavo Campelo</span>
             </div>
-          ) : incidents.length === 0 ? (
-            <div className="mt-6 grid justify-items-center gap-3 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-              <span className="text-4xl">📭</span>
-              <h3 className="text-lg font-black text-slate-900">
-                Nenhum incidente encontrado
-              </h3>
-              <p className="max-w-md text-sm leading-6 text-slate-500">
-                Cadastre um novo incidente ou ajuste os filtros utilizados.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-6 grid gap-4">
-              {incidents.map((incident, index) => (
-                <article
-                  key={incident.id}
-                  className="animate-fade-up overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-900/5 transition duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10"
-                  style={{ animationDelay: `${index * 55}ms` }}
-                >
-                  <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                    <div className="grid grid-cols-[14px_1fr] gap-4">
-                      <span
-                        className={`mt-2 h-3.5 w-3.5 rounded-full shadow-[0_0_0_7px] ${getStatusDotStyles(
-                          incident.status
-                        )}`}
-                      />
+          </div>
 
-                      <div>
-                        <h3 className="text-lg font-black tracking-[-0.03em] text-slate-950">
-                          {incident.title}
-                        </h3>
+          <div className="nav-actions" aria-label="Navegação principal">
+            <button
+              type="button"
+              className={`nav-tab ${activePage === "dashboard" ? "nav-tab-active" : ""}`}
+              onClick={() => changePage("dashboard")}
+            >
+              Início
+            </button>
 
-                        <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">
-                          {incident.description}
-                        </p>
-                      </div>
-                    </div>
+            <button
+              type="button"
+              className={`nav-tab ${activePage === "processes" ? "nav-tab-active" : ""}`}
+              onClick={() => changePage("processes")}
+            >
+              Processos
+            </button>
+          </div>
+        </nav>
 
-                    <span
-                      className={`w-fit rounded-full border px-3 py-1.5 text-xs font-black ${getSeverityStyles(
-                        incident.severity
-                      )}`}
-                    >
-                      {formatSeverity(incident.severity)}
-                    </span>
-                  </div>
+        {activePage === "dashboard" && (
+          <div className="page-view">
+            <header className="hero-section">
+              <div className="hero-inner">
+                <div className="hero-eyebrow">
+                  <span className="eyebrow-pill">Dashboard executivo</span>
+                </div>
 
-                  <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-3">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <span className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                        Status atual
-                      </span>
-                      <strong
-                        className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-black ${getStatusBadgeStyles(
-                          incident.status
-                        )}`}
-                      >
-                        {formatStatus(incident.status)}
-                      </strong>
-                    </div>
+                <h1 className="hero-title">
+                  Monitoramento<br />
+                  <span className="hero-title-accent">em tempo real.</span>
+                </h1>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <span className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                        Criado em
-                      </span>
-                      <strong className="mt-2 block text-sm text-slate-800">
-                        {new Date(incident.createdAt).toLocaleString("pt-BR")}
-                      </strong>
-                    </div>
+                <p className="hero-subtitle">
+                  Painel inicial para acompanhar saúde da API, volume de incidentes,
+                  evolução dos status e pontos de atenção do sistema.
+                </p>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <span className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                        Atualizar status
-                      </span>
-                      <select
-                        value={incident.status}
-                        className={`${selectClass} mt-2`}
-                        onChange={(event) =>
-                          updateStatus(incident.id, event.target.value as IncidentStatus)
-                        }
-                      >
-                        <option value="Aberto">Aberto</option>
-                        <option value="EmAnalise">Em análise</option>
-                        <option value="Resolvido">Resolvido</option>
-                      </select>
-                    </div>
-                  </div>
+                <div className="hero-actions">
+                  <button type="button" className="btn-primary" onClick={() => changePage("processes")}>
+                    Ver processos
+                  </button>
 
-                  <div className="mt-5 flex flex-col justify-end gap-3 border-t border-slate-100 pt-5 sm:flex-row">
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-2xl border border-slate-200 bg-white px-5 font-black text-slate-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700 hover:shadow-lg"
-                      onClick={() => handleEditIncident(incident)}
-                    >
-                      Editar
-                    </button>
+                  <a href="#novo-incidente" className="btn-ghost">
+                    Novo incidente
+                  </a>
+                </div>
+              </div>
 
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-2xl border border-red-200 bg-red-50 px-5 font-black text-red-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-100 hover:shadow-lg"
-                      onClick={() => handleDeleteIncident(incident.id)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
+              <div className="hero-status-card glass-card">
+                <div className={`api-badge ${apiInfo.cls}`}>
+                  <span
+                    className="api-dot"
+                    style={{
+                      background: apiInfo.dot,
+                      boxShadow: `0 0 8px ${apiInfo.dot}`,
+                    }}
+                  />
+                  {apiInfo.label}
+                </div>
+
+                <p className="api-desc">{apiInfo.desc}</p>
+
+                <div className="api-stack-row">
+                  <span className="stack-label">Stack</span>
+                  <span className="stack-value">ASP.NET Core · React · TypeScript</span>
+                </div>
+              </div>
+            </header>
+
+            <section className="stats-grid" aria-label="Resumo">
+              {([
+                ["Total", stats.total, "incidentes"],
+                ["Abertos", stats.open, "aguardando"],
+                ["Em análise", stats.analysis, "em diagnóstico"],
+                ["Resolvidos", stats.resolved, "concluídos"],
+              ] as const).map(([label, value, sub], i) => (
+                <article key={label} className="stat-card glass-card" style={{ animationDelay: `${i * 60}ms` }}>
+                  <span className="stat-label">{label}</span>
+                  <strong className="stat-value">{value}</strong>
+                  <span className="stat-sub">{sub}</span>
                 </article>
               ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+            </section>
+
+            <section className="dashboard-grid">
+              <article className="dashboard-panel glass-card">
+                <span className="section-eyebrow">Eficiência</span>
+                <h2 className="section-title">{resolutionRate}%</h2>
+                <p className="section-desc">
+                  Taxa de resolução calculada com base nos incidentes concluídos.
+                </p>
+
+                <div className="progress-track">
+                  <span style={{ width: `${resolutionRate}%` }} />
+                </div>
+              </article>
+
+              <article className="dashboard-panel glass-card">
+                <span className="section-eyebrow">Prioridade</span>
+                <h2 className="section-title">{stats.critical}</h2>
+                <p className="section-desc">
+                  Incidente(s) crítico(s) exigindo maior atenção operacional.
+                </p>
+              </article>
+
+              <article className="dashboard-panel glass-card">
+                <span className="section-eyebrow">Últimos registros</span>
+
+                {latestIncidents.length === 0 ? (
+                  <p className="section-desc">Nenhum incidente cadastrado até o momento.</p>
+                ) : (
+                  <div className="mini-list">
+                    {latestIncidents.map((incident) => {
+                      const sta = statusConfig[incident.status];
+
+                      return (
+                        <button
+                          key={incident.id}
+                          type="button"
+                          className="mini-item"
+                          onClick={() => handleEditIncident(incident)}
+                        >
+                          <span
+                            className="status-dot"
+                            style={{
+                              background: sta.dot,
+                              boxShadow: `0 0 0 4px ${sta.dot}22, 0 0 12px ${sta.dot}55`,
+                            }}
+                          />
+
+                          <span>
+                            <strong>{incident.title}</strong>
+                            <small>{formatStatus(incident.status)}</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </article>
+            </section>
+
+            <section id="novo-incidente" className="form-section glass-card">
+              <div className="section-header">
+                <div>
+                  <span className="section-eyebrow">Cadastro rápido</span>
+                  <h2 className="section-title">Novo incidente</h2>
+                </div>
+
+                <p className="section-desc">
+                  Registre um novo processo diretamente pelo dashboard.
+                </p>
+              </div>
+
+              {!isEditing && renderMessages()}
+              {renderIncidentForm()}
+            </section>
+          </div>
+        )}
+
+        {activePage === "processes" && (
+          <div className="page-view">
+            <section className="process-hero glass-card">
+              <div>
+                <span className="section-eyebrow">Processos</span>
+                <h1 className="section-title">Filtragem e gestão</h1>
+                <p className="section-desc">
+                  Visualize cada incidente, filtre por status ou severidade, atualize
+                  processos, edite registros e exclua itens quando necessário.
+                </p>
+              </div>
+
+              <button type="button" className="btn-primary" onClick={() => changePage("dashboard")}>
+                Voltar ao início
+              </button>
+            </section>
+
+            {isEditing && (
+              <section id="editor-panel" className="form-section glass-card">
+                <div className="section-header">
+                  <div>
+                    <span className="section-eyebrow">Edição</span>
+                    <h2 className="section-title">Editar incidente</h2>
+                  </div>
+
+                  <p className="section-desc">
+                    Atualize os dados e salve as alterações do processo selecionado.
+                  </p>
+                </div>
+
+                <div className="alert alert-info">
+                  <span className="alert-icon">✦</span>
+                  <div>
+                    <strong>Modo edição ativo</strong>
+                    <p>Para sair deste modo, clique em cancelar edição.</p>
+                  </div>
+                </div>
+
+                {renderMessages()}
+                {renderIncidentForm()}
+              </section>
+            )}
+
+            {!isEditing && renderMessages()}
+
+            <section id="incidentes" className="list-section glass-card">
+              <div className="list-header">
+                <div>
+                  <span className="section-eyebrow">Monitoramento</span>
+                  <h2 className="section-title">Incidentes</h2>
+                  <p className="section-count">
+                    {filteredIncidents.length} registro{filteredIncidents.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                <div className="filters-row">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    aria-label="Filtrar por status"
+                    className="field-select"
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="Aberto">Aberto</option>
+                    <option value="EmAnalise">Em análise</option>
+                    <option value="Resolvido">Resolvido</option>
+                  </select>
+
+                  <select
+                    value={severityFilter}
+                    onChange={(e) => setSeverityFilter(e.target.value)}
+                    aria-label="Filtrar por severidade"
+                    className="field-select"
+                  >
+                    <option value="">Todas severidades</option>
+                    <option value="Baixa">Baixa</option>
+                    <option value="Media">Média</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Critica">Crítica</option>
+                  </select>
+
+                  <button type="button" className="btn-ghost-sm" onClick={clearFilters}>
+                    Limpar
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="empty-state">
+                  <div className="spinner" />
+                  <p className="empty-title">Carregando incidentes</p>
+                  <p className="empty-sub">Buscando dados atualizados</p>
+                </div>
+              ) : filteredIncidents.length === 0 ? (
+                <div className="empty-state">
+                  <span className="empty-icon">◌</span>
+                  <p className="empty-title">Nenhum incidente encontrado</p>
+                  <p className="empty-sub">Cadastre um novo ou ajuste os filtros</p>
+                </div>
+              ) : (
+                <div className="incidents-list">
+                  {filteredIncidents.map((incident, index) => renderIncidentCard(incident, index))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        <footer className="app-footer glass-card">
+          <div>
+            <strong>Incident Manager</strong>
+            <span>Sistema full stack para gestão de incidentes.</span>
+          </div>
+
+          <p>
+            © {new Date().getFullYear()} Gustavo Campelo. Desenvolvido por Gustavo Campelo.
+          </p>
+        </footer>
+      </main>
+    </div>
   );
 }
 
