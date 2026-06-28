@@ -1,88 +1,86 @@
-@import "tailwindcss";
-
-:root {
-  color-scheme: light;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-}
-
 html {
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 113, 227, 0.85) rgba(255, 255, 255, 0.04);
 }
 
-body {
-  min-width: 320px;
-  min-height: 100vh;
-  margin: 0;
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 34rem),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 34rem),
-    linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
-  color: #0f172a;
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.01)
+    );
+  border-left: 1px solid rgba(255, 255, 255, 0.045);
 }
 
-#root {
-  min-height: 100vh;
+::-webkit-scrollbar-thumb {
+  min-height: 80px;
+  border: 3px solid #000000;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(106, 176, 245, 0.95),
+      rgba(0, 113, 227, 0.92),
+      rgba(94, 92, 230, 0.88)
+    );
+  box-shadow:
+    0 0 18px rgba(0, 113, 227, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(135, 196, 255, 1),
+      rgba(0, 119, 237, 1),
+      rgba(110, 108, 255, 0.95)
+    );
+  box-shadow:
+    0 0 26px rgba(0, 113, 227, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+::-webkit-scrollbar-thumb:active {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 113, 227, 1),
+      rgba(94, 92, 230, 1)
+    );
 }
 
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+::-webkit-scrollbar-corner {
+  background: #000000;
 }
 
-@keyframes soft-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.78;
-    transform: scale(1.08);
-  }
+textarea::-webkit-scrollbar,
+select::-webkit-scrollbar,
+.glass-card::-webkit-scrollbar,
+.incidents-list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-.animate-fade-up {
-  animation: fade-up 0.55s ease both;
+textarea::-webkit-scrollbar-track,
+select::-webkit-scrollbar-track,
+.glass-card::-webkit-scrollbar-track,
+.incidents-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.035);
 }
 
-.animate-scale-in {
-  animation: scale-in 0.35s ease both;
-}
-
-.animate-soft-pulse {
-  animation: soft-pulse 1.6s ease-in-out infinite;
+textarea::-webkit-scrollbar-thumb,
+select::-webkit-scrollbar-thumb,
+.glass-card::-webkit-scrollbar-thumb,
+.incidents-list::-webkit-scrollbar-thumb {
+  border: 3px solid rgba(10, 10, 12, 0.95);
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.85);
 }

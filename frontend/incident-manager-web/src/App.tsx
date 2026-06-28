@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./services/api";
+import useSmoothScroll from "./hooks/useSmoothScroll";
 import "./App.css";
 
 type IncidentSeverity = "Baixa" | "Media" | "Alta" | "Critica";
@@ -33,6 +34,7 @@ const initialFormData: FormData = {
 };
 
 function App() {
+  useSmoothScroll();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [editingIncidentId, setEditingIncidentId] = useState<string | null>(null);
@@ -773,7 +775,7 @@ function App() {
           </div>
 
           <p>
-            © {new Date().getFullYear()} Gustavo Campelo. Desenvolvido por Gustavo Campelo.
+            © {new Date().getFullYear()} Gustavo Campelo. Todos os direitos reservados.
           </p>
         </footer>
       </main>

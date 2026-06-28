@@ -5,12 +5,13 @@
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)
 ![React](https://img.shields.io/badge/React-TypeScript-61DAFB)
 ![Vite](https://img.shields.io/badge/Vite-Front--end-646CFF)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38BDF8)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57)
 ![Docker](https://img.shields.io/badge/Docker-API-2496ED)
 ![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-222222)
 ![Render](https://img.shields.io/badge/API-Render-46E3B7)
 
-Sistema full stack para gestão de incidentes, desenvolvido como parte de um teste técnico. O projeto contempla front-end, back-end, persistência em banco de dados, logs mínimos para diagnóstico, testes automatizados, documentação de API, nota técnica e deploy demonstrativo.
+Sistema full stack para gestão de incidentes, desenvolvido como parte de um teste técnico. O projeto contempla front-end, back-end, persistência em banco de dados, CRUD completo, logs mínimos para diagnóstico, testes automatizados, documentação de API, nota técnica, deploy demonstrativo e interface premium com dashboard.
 
 ## Aplicação online
 
@@ -42,24 +43,35 @@ https://incident-manager-api-yidz.onrender.com/api/incidents
 
 ## Visão geral
 
-A aplicação permite cadastrar, listar, filtrar e atualizar o status de incidentes. O fluxo foi pensado para simular um cenário real de acompanhamento de erros recorrentes em um sistema, permitindo registrar informações básicas do problema, severidade, status e datas de criação e atualização.
+A aplicação permite cadastrar, listar, filtrar, editar, atualizar status e excluir incidentes. O fluxo foi pensado para simular um cenário real de acompanhamento de erros recorrentes em um sistema, permitindo registrar informações básicas do problema, severidade, status e datas de criação e atualização.
 
-O front-end possui uma interface responsiva, cards de resumo, formulário com validações, filtros por status e severidade, atualização de status e um indicador dinâmico de disponibilidade da API.
+A interface foi organizada em duas áreas principais:
+
+* **Início:** dashboard com visão geral do sistema, status da API, indicadores e cadastro rápido de incidentes.
+* **Processos:** tela de gestão com filtros, listagem de incidentes, edição, exclusão e atualização de status.
+
+O front-end possui uma interface responsiva, com acabamento visual premium em estilo dark/glass, animações suaves, cards de resumo, indicador dinâmico de disponibilidade da API, footer com autoria e barra de rolagem personalizada.
 
 ## Funcionalidades
 
+* Dashboard inicial com visão geral dos incidentes
+* Indicador visual de disponibilidade da API
 * Cadastro de incidentes
 * Listagem de incidentes
 * Filtro por status
 * Filtro por severidade
-* Atualização de status
+* Edição completa de incidente
+* Atualização rápida de status
+* Exclusão de incidente com confirmação
 * Validações no front-end
 * Validações no back-end
 * Persistência em banco de dados SQLite
 * Logs das principais operações da API
 * Testes automatizados dos cenários principais
-* Indicador visual de disponibilidade da API
 * Dados iniciais para demonstração
+* Interface responsiva
+* Animações e microinterações
+* Footer com autoria
 * Deploy demonstrativo online
 
 ## Tecnologias utilizadas
@@ -78,8 +90,9 @@ O front-end possui uma interface responsiva, cards de resumo, formulário com va
 * React
 * TypeScript
 * Vite
+* Tailwind CSS
 * Axios
-* CSS
+* CSS customizado
 
 ### Deploy
 
@@ -117,13 +130,16 @@ teste-tecnico-incidentes/
 ## Como validar rapidamente
 
 1. Acesse a aplicação publicada no GitHub Pages.
-2. Aguarde o indicador da API ficar verde.
-3. Cadastre um novo incidente preenchendo título, descrição e severidade.
-4. Verifique se o incidente aparece na listagem.
-5. Altere o status do incidente para "Em análise" ou "Resolvido".
-6. Utilize os filtros por status e severidade.
-7. Acesse `/api/health` para validar a disponibilidade da API.
-8. Execute `dotnet test` localmente para validar os testes automatizados.
+2. Aguarde o indicador da API ficar disponível.
+3. Na tela inicial, confira os cards do dashboard.
+4. Cadastre um novo incidente pelo formulário.
+5. Acesse a área de processos.
+6. Filtre os incidentes por status ou severidade.
+7. Edite um incidente existente.
+8. Atualize o status de um incidente.
+9. Exclua um incidente.
+10. Acesse `/api/health` para validar a disponibilidade da API.
+11. Execute `dotnet test` localmente para validar os testes automatizados.
 
 ## Como executar localmente
 
@@ -232,7 +248,9 @@ Os testes cobrem os principais cenários da API, incluindo:
 * Validação de incidente sem título
 * Listagem de incidentes cadastrados
 * Retorno de erro ao buscar incidente inexistente
-* Atualização de status de um incidente
+* Atualização completa de incidente
+* Atualização de status de incidente
+* Exclusão de incidente
 
 ## Build do front-end
 
@@ -364,12 +382,28 @@ Resolvido
 A API registra logs mínimos nas principais operações:
 
 * Listagem de incidentes
+* Busca de incidente por ID
 * Criação de incidente
-* Atualização de incidente
+* Atualização completa de incidente
 * Alteração de status
+* Exclusão de incidente
 * Tentativas de buscar, atualizar ou remover incidentes inexistentes
 
 Esses logs auxiliam no diagnóstico de problemas e na rastreabilidade das operações.
+
+## Design e experiência
+
+A interface foi desenvolvida com foco em clareza, usabilidade e apresentação profissional. O sistema conta com:
+
+* Tema escuro em estilo glassmorphism
+* Cards com transparência e blur
+* Orbes animados de fundo
+* Microinterações em botões e cards
+* Indicador visual de status da API
+* Separação entre dashboard e gestão de processos
+* Scrollbar personalizada
+* Layout responsivo
+* Footer com autoria do projeto
 
 ## Deploy
 
@@ -405,7 +439,7 @@ No ambiente gratuito do Render, a persistência com SQLite deve ser considerada 
 
 ## Nota técnica
 
-A análise técnica do incidente, decisões, trade-offs e melhorias futuras estão documentadas em:
+A análise técnica do incidente, decisões, trade-offs, limitações e melhorias futuras estão documentadas em:
 
 ```txt
 docs/nota-tecnica.md
@@ -417,10 +451,16 @@ docs/nota-tecnica.md
 * API REST documentada
 * Uso de DTOs para entrada de dados
 * Validações no front-end e no back-end
+* CRUD completo de incidentes
 * Logs para diagnóstico
 * Testes automatizados
 * Configuração de CORS para integração entre front-end e API
 * Uso de variável de ambiente para URL da API no deploy
 * Dockerização da API
 * Deploy automatizado do front-end com GitHub Actions
+* Interface responsiva e orientada à experiência do usuário
 * Documentação com instruções claras de execução
+
+## Autoria
+
+Projeto desenvolvido por **Gustavo Campelo**.
