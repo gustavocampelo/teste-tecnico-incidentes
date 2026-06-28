@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Node
+node_modules/
+dist/
+build/
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Banco local
+*.db
+*.sqlite
+*.sqlite3
+
+# VS Code
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db
