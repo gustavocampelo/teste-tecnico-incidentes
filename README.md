@@ -2,6 +2,14 @@
 
 ![Prévia da aplicação](docs/images/preview.png)
 
+![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)
+![React](https://img.shields.io/badge/React-TypeScript-61DAFB)
+![Vite](https://img.shields.io/badge/Vite-Front--end-646CFF)
+![SQLite](https://img.shields.io/badge/SQLite-Database-003B57)
+![Docker](https://img.shields.io/badge/Docker-API-2496ED)
+![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-222222)
+![Render](https://img.shields.io/badge/API-Render-46E3B7)
+
 Sistema full stack para gestão de incidentes, desenvolvido como parte de um teste técnico. O projeto contempla front-end, back-end, persistência em banco de dados, logs mínimos para diagnóstico, testes automatizados, documentação de API, nota técnica e deploy demonstrativo.
 
 ## Aplicação online
@@ -18,7 +26,7 @@ API publicada no Render:
 https://incident-manager-api-yidz.onrender.com
 ```
 
-Endpoint de saúde da API:
+Health check da API:
 
 ```txt
 https://incident-manager-api-yidz.onrender.com/api/health
@@ -30,13 +38,13 @@ Endpoint principal da API:
 https://incident-manager-api-yidz.onrender.com/api/incidents
 ```
 
-Observação: a API está hospedada em ambiente gratuito no Render. Por isso, ela pode entrar em modo de espera após um período sem uso. Caso o indicador da API apareça como indisponível no primeiro acesso, aguarde alguns segundos e atualize a página.
+> Observação: a API está hospedada no plano gratuito do Render. No primeiro acesso, ela pode levar alguns segundos para responder caso esteja em modo de espera. Se o indicador da API aparecer como indisponível, aguarde alguns segundos e atualize a página.
 
 ## Visão geral
 
 A aplicação permite cadastrar, listar, filtrar e atualizar o status de incidentes. O fluxo foi pensado para simular um cenário real de acompanhamento de erros recorrentes em um sistema, permitindo registrar informações básicas do problema, severidade, status e datas de criação e atualização.
 
-O front-end possui uma interface responsiva, com cards de resumo, formulário validado, filtros, listagem de incidentes e indicador dinâmico de disponibilidade da API.
+O front-end possui uma interface responsiva, cards de resumo, formulário com validações, filtros por status e severidade, atualização de status e um indicador dinâmico de disponibilidade da API.
 
 ## Funcionalidades
 
@@ -51,6 +59,7 @@ O front-end possui uma interface responsiva, com cards de resumo, formulário va
 * Logs das principais operações da API
 * Testes automatizados dos cenários principais
 * Indicador visual de disponibilidade da API
+* Dados iniciais para demonstração
 * Deploy demonstrativo online
 
 ## Tecnologias utilizadas
@@ -74,10 +83,10 @@ O front-end possui uma interface responsiva, com cards de resumo, formulário va
 
 ### Deploy
 
-* GitHub Pages para o front-end
-* GitHub Actions para build e publicação do front-end
+* GitHub Pages para publicação do front-end
+* GitHub Actions para build e deploy do front-end
 * Render para hospedagem da API
-* Docker para empacotamento da API
+* Docker para empacotamento e execução da API
 
 ## Estrutura do projeto
 
@@ -104,6 +113,17 @@ teste-tecnico-incidentes/
 ├── README.md
 └── .gitignore
 ```
+
+## Como validar rapidamente
+
+1. Acesse a aplicação publicada no GitHub Pages.
+2. Aguarde o indicador da API ficar verde.
+3. Cadastre um novo incidente preenchendo título, descrição e severidade.
+4. Verifique se o incidente aparece na listagem.
+5. Altere o status do incidente para "Em análise" ou "Resolvido".
+6. Utilize os filtros por status e severidade.
+7. Acesse `/api/health` para validar a disponibilidade da API.
+8. Execute `dotnet test` localmente para validar os testes automatizados.
 
 ## Como executar localmente
 
@@ -142,7 +162,7 @@ A API será executada localmente em:
 http://localhost:5252
 ```
 
-Endpoint de teste:
+Endpoint de saúde:
 
 ```txt
 http://localhost:5252/api/health
@@ -206,7 +226,13 @@ Execute:
 dotnet test
 ```
 
-Os testes cobrem os principais cenários da API, incluindo criação de incidente, validação de dados obrigatórios, listagem, busca de registro inexistente e atualização de status.
+Os testes cobrem os principais cenários da API, incluindo:
+
+* Criação de incidente válido
+* Validação de incidente sem título
+* Listagem de incidentes cadastrados
+* Retorno de erro ao buscar incidente inexistente
+* Atualização de status de um incidente
 
 ## Build do front-end
 
@@ -333,17 +359,6 @@ EmAnalise
 Resolvido
 ```
 
-## Como validar o fluxo principal
-
-1. Acesse a aplicação publicada no GitHub Pages.
-2. Aguarde o indicador da API ficar verde.
-3. Cadastre um novo incidente preenchendo título, descrição e severidade.
-4. Verifique se o incidente aparece na listagem.
-5. Altere o status do incidente para "Em análise" ou "Resolvido".
-6. Utilize os filtros por status e severidade.
-7. Acesse o endpoint `/api/health` para validar a disponibilidade da API.
-8. Execute `dotnet test` localmente para validar os testes automatizados.
-
 ## Logs
 
 A API registra logs mínimos nas principais operações:
@@ -395,3 +410,17 @@ A análise técnica do incidente, decisões, trade-offs e melhorias futuras est�
 ```txt
 docs/nota-tecnica.md
 ```
+
+## Decisões e boas práticas demonstradas
+
+* Separação entre front-end e back-end
+* API REST documentada
+* Uso de DTOs para entrada de dados
+* Validações no front-end e no back-end
+* Logs para diagnóstico
+* Testes automatizados
+* Configuração de CORS para integração entre front-end e API
+* Uso de variável de ambiente para URL da API no deploy
+* Dockerização da API
+* Deploy automatizado do front-end com GitHub Actions
+* Documentação com instruções claras de execução
