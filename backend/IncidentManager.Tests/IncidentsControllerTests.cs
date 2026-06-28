@@ -116,6 +116,43 @@ public class IncidentsControllerTests
     }
 
     [Fact]
+    public async Task Update_DeveAtualizarIncidenteExistente()
+    {
+        var context = CreateContext();
+
+        var incident = new Incident
+        {
+            Title = "Erro antigo",
+            Description = "Descrição antiga do incidente.",
+            Severity = IncidentSeverity.Baixa,
+            Status = IncidentStatus.Aberto
+        };
+
+        context.Incidents.Add(incident);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+
+        var request = new UpdateIncidentRequest
+        {
+            Title = "Erro atualizado",
+            Description = "Descrição atualizada do incidente.",
+            Severity = IncidentSeverity.Critica,
+            Status = IncidentStatus.EmAnalise
+        };
+
+        var result = await controller.Update(incident.Id, request);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var updatedIncident = Assert.IsType<Incident>(okResult.Value);
+
+        Assert.Equal("Erro atualizado", updatedIncident.Title);
+        Assert.Equal("Descrição atualizada do incidente.", updatedIncident.Description);
+        Assert.Equal(IncidentSeverity.Critica, updatedIncident.Severity);
+        Assert.Equal(IncidentStatus.EmAnalise, updatedIncident.Status);
+    }
+
+    [Fact]
     public async Task UpdateStatus_DeveAtualizarStatusDoIncidente()
     {
         var context = CreateContext();
@@ -144,5 +181,29 @@ public class IncidentsControllerTests
         var updatedIncident = Assert.IsType<Incident>(okResult.Value);
 
         Assert.Equal(IncidentStatus.Resolvido, updatedIncident.Status);
+    }
+
+    [Fact]
+    public async Task Delete_DeveRemoverIncidenteExistente()
+    {
+        var context = CreateContext();
+
+        var incident = new Incident
+        {
+            Title = "Erro para exclusão",
+            Description = "Incidente utilizado para validar exclusão.",
+            Severity = IncidentSeverity.Media,
+            Status = IncidentStatus.Aberto
+        };
+
+        context.Incidents.Add(incident);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context);
+
+        var result = await controller.Delete(incident.Id);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Empty(context.Incidents);
     }
 }

@@ -21,22 +21,29 @@ interface FormData {
   title: string;
   description: string;
   severity: IncidentSeverity | "";
+  status: IncidentStatus;
 }
+
+const initialFormData: FormData = {
+  title: "",
+  description: "",
+  severity: "",
+  status: "Aberto",
+};
 
 function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [formData, setFormData] = useState<FormData>({
-    title: "",
-    description: "",
-    severity: "",
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
 
+  const [editingIncidentId, setEditingIncidentId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [severityFilter, setSeverityFilter] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
+
+  const isEditing = Boolean(editingIncidentId);
 
   const stats = useMemo(() => {
     return {
@@ -121,27 +128,94 @@ function App() {
     }
 
     try {
-      await api.post("/incidents", {
-        title: formData.title,
-        description: formData.description,
-        severity: formData.severity,
-      });
+      if (editingIncidentId) {
+        await api.put(`/incidents/${editingIncidentId}`, {
+          title: formData.title,
+          description: formData.description,
+          severity: formData.severity,
+          status: formData.status,
+        });
 
-      setFormData({
-        title: "",
-        description: "",
-        severity: "",
-      });
+        setSuccessMessage("Incidente atualizado com sucesso.");
+      } else {
+        await api.post("/incidents", {
+          title: formData.title,
+          description: formData.description,
+          severity: formData.severity,
+        });
 
+        setSuccessMessage("Incidente cadastrado com sucesso.");
+      }
+
+      setFormData(initialFormData);
+      setEditingIncidentId(null);
       setApiStatus("online");
       setErrors([]);
-      setSuccessMessage("Incidente cadastrado com sucesso.");
 
       await loadIncidents();
     } catch {
       setApiStatus("offline");
       setSuccessMessage("");
-      setErrors(["Não foi possível cadastrar o incidente. Verifique se a API está rodando."]);
+      setErrors([
+        isEditing
+          ? "Não foi possível atualizar o incidente. Verifique se a API está rodando."
+          : "Não foi possível cadastrar o incidente. Verifique se a API está rodando.",
+      ]);
+    }
+  }
+
+  function handleEditIncident(incident: Incident) {
+    setEditingIncidentId(incident.id);
+
+    setFormData({
+      title: incident.title,
+      description: incident.description,
+      severity: incident.severity,
+      status: incident.status,
+    });
+
+    setErrors([]);
+    setSuccessMessage("");
+
+    document
+      .getElementById("novo-incidente")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function cancelEdit() {
+    setEditingIncidentId(null);
+    setFormData(initialFormData);
+    setErrors([]);
+    setSuccessMessage("");
+  }
+
+  async function handleDeleteIncident(id: string) {
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir este incidente? Essa ação não poderá ser desfeita."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await api.delete(`/incidents/${id}`);
+
+      if (editingIncidentId === id) {
+        cancelEdit();
+      }
+
+      setApiStatus("online");
+      setErrors([]);
+      setSuccessMessage("Incidente excluído com sucesso.");
+
+      await loadIncidents();
+    } catch {
+      setApiStatus("offline");
+      setSuccessMessage("");
+      setErrors([
+        "Não foi possível excluir o incidente. Verifique se a API está rodando.",
+      ]);
     }
   }
 
@@ -157,7 +231,9 @@ function App() {
     } catch {
       setApiStatus("offline");
       setSuccessMessage("");
-      setErrors(["Não foi possível atualizar o status do incidente. Verifique se a API está rodando."]);
+      setErrors([
+        "Não foi possível atualizar o status do incidente. Verifique se a API está rodando.",
+      ]);
     }
   }
 
@@ -204,8 +280,8 @@ function App() {
           <h1>Gestão de Incidentes</h1>
 
           <p>
-            Cadastre, acompanhe e priorize incidentes com uma experiência simples,
-            clara e orientada ao diagnóstico.
+            Cadastre, acompanhe, edite, exclua e priorize incidentes com uma
+            experiência simples, clara e orientada ao diagnóstico.
           </p>
 
           <div className="hero-actions">
@@ -269,15 +345,29 @@ function App() {
       <section id="novo-incidente" className="content-card">
         <div className="card-heading">
           <div>
-            <span className="section-kicker">Cadastro</span>
-            <h2>Novo incidente</h2>
+            <span className="section-kicker">
+              {isEditing ? "Edição" : "Cadastro"}
+            </span>
+
+            <h2>{isEditing ? "Editar incidente" : "Novo incidente"}</h2>
           </div>
 
           <p>
-            Registre o problema com informações objetivas para facilitar a análise
-            técnica.
+            {isEditing
+              ? "Atualize os dados do incidente selecionado e salve as alterações."
+              : "Registre o problema com informações objetivas para facilitar a análise técnica."}
           </p>
         </div>
+
+        {isEditing && (
+          <div className="editing-banner">
+            <strong>Modo de edição ativo</strong>
+            <span>
+              Você está editando um incidente existente. Para criar um novo,
+              cancele a edição.
+            </span>
+          </div>
+        )}
 
         {errors.length > 0 && (
           <div className="feedback feedback-error">
@@ -342,10 +432,40 @@ function App() {
               </select>
             </div>
 
+            {isEditing && (
+              <div className="field">
+                <label htmlFor="status">Status</label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      status: event.target.value as IncidentStatus,
+                    })
+                  }
+                >
+                  <option value="Aberto">Aberto</option>
+                  <option value="EmAnalise">Em análise</option>
+                  <option value="Resolvido">Resolvido</option>
+                </select>
+              </div>
+            )}
+
             <div className="submit-area">
-              <button type="submit">Cadastrar incidente</button>
+              <button type="submit">
+                {isEditing ? "Salvar alterações" : "Cadastrar incidente"}
+              </button>
             </div>
           </div>
+
+          {isEditing && (
+            <div className="form-actions">
+              <button type="button" className="outline-button" onClick={cancelEdit}>
+                Cancelar edição
+              </button>
+            </div>
+          )}
         </form>
       </section>
 
@@ -442,6 +562,24 @@ function App() {
                       <option value="Resolvido">Resolvido</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="incident-actions">
+                  <button
+                    type="button"
+                    className="outline-button"
+                    onClick={() => handleEditIncident(incident)}
+                  >
+                    Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => handleDeleteIncident(incident.id)}
+                  >
+                    Excluir
+                  </button>
                 </div>
               </article>
             ))}
